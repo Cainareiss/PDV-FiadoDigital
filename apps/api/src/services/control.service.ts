@@ -4,6 +4,7 @@ const controlRepository = new ControlRepository();
 
 export class ControlService {
   async getStockSummary(options?: {
+    search?: string;
     product_type_id?: string;
     brand_id?: string;
     page?: number;

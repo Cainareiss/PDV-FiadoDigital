@@ -418,7 +418,8 @@ const weightUnitOptions: Array<{ label: string; value: WeightUnit }> = [
 ];
 
 onMounted(async () => {
-  await Promise.all([loadProducts(), loadProductTypes(), loadBrands()]);
+  window.addEventListener("focus", reloadProducts);
+  await Promise.all([loadProducts(true), loadProductTypes(), loadBrands()]);
 
   if (!isAdmin.value && activeTab.value === "prices") {
     activeTab.value = "products";
@@ -426,6 +427,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener("focus", reloadProducts);
 });
 
 watch([productsPerPage, searchQuery], () => {
@@ -1091,6 +1093,8 @@ async function submitStockEntry(): Promise<void> {
     }
 
     await reloadProductById(foundStockProduct.value.id);
+    productStore.invalidate();
+    await loadProducts(true);
     closeStockModal();
     showSuccessToast("Entrada de estoque registrada com sucesso!");
   } catch (error) {

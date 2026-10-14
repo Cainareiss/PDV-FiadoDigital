@@ -114,6 +114,8 @@ const loadingFilters = ref(false);
 
 const selectedProductTypeId = ref("");
 const selectedBrandId = ref("");
+const stockSearch = ref("");
+let stockRequest = 0;
 
 const stockLoading = ref(false);
 const stockError = ref<string | null>(null);
@@ -528,11 +530,13 @@ async function loadFilters(): Promise<void> {
 }
 
 async function loadStockSummary(): Promise<void> {
+  const request = ++stockRequest;
   stockLoading.value = true;
   stockError.value = null;
 
   try {
     const params = new URLSearchParams({
+      search: stockSearch.value.trim(),
       page: String(stockPage.value),
       per_page: String(stockPerPage.value),
       sort_by: stockSortKey.value,
@@ -552,6 +556,7 @@ async function loadStockSummary(): Promise<void> {
     );
     const json = await response.json();
 
+    if (request !== stockRequest) return;
     if (!response.ok) {
       stockError.value =
         json.message || "Não foi possível carregar o resumo de estoque.";
@@ -559,6 +564,7 @@ async function loadStockSummary(): Promise<void> {
     }
 
     const payload = json.data as StockSummaryResponse;
+    if (request !== stockRequest) return;
     stockRows.value = payload.data;
     stockSummary.value = payload.summary;
     stockTotal.value = payload.pagination.total;
@@ -566,9 +572,10 @@ async function loadStockSummary(): Promise<void> {
     stockPage.value = payload.pagination.page;
   } catch (error) {
     console.error("Erro ao carregar resumo de estoque:", error);
+    if (request !== stockRequest) return;
     stockError.value = "Erro de conexão ao carregar o estoque.";
   } finally {
-    stockLoading.value = false;
+    if (request === stockRequest) stockLoading.value = false;
   }
 }
 
@@ -856,6 +863,10 @@ async function loadCancellations(): Promise<void> {
           </div>
 
           <section v-if="activeTab === 'stock'" class="mt-6 space-y-6">
+            <form class="flex gap-3 rounded-lg bg-white p-4" @submit.prevent="stockPage = 1; loadStockSummary()">
+              <input v-model="stockSearch" aria-label="Buscar em todo o estoque" placeholder="Buscar nome ou código em todo o estoque" class="min-w-0 flex-1 rounded border px-3 py-2" />
+              <button class="rounded bg-primary px-4 py-2 text-white">Buscar / Atualizar</button>
+            </form>
             <div
               class="grid gap-4 rounded-lg border border-gray-200 bg-white p-4 md:grid-cols-2"
             >
@@ -1261,7 +1272,7 @@ async function loadCancellations(): Promise<void> {
             </div>
 
             <div
-              v-if="stockRows.length > 0 && stockTotalPages > 1"
+              v-if="stockRows.length > 0"
               class="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4"
             >
               <div class="text-sm text-gray-600">

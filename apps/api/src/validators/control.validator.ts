@@ -11,6 +11,7 @@ const createStockAdjustmentSchema = z.object({
 });
 
 export const stockSummaryQuerySchema = z.object({
+  search: z.string().trim().max(100).optional(),
   product_type_id: z.string().trim().min(1).optional(),
   brand_id: z.string().trim().min(1).optional(),
   page: z.coerce.number().int().positive().default(1),

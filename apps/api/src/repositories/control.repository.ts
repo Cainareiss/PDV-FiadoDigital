@@ -47,6 +47,7 @@ function toRange(startDate?: string, endDate?: string): { gte?: Date; lte?: Date
 
 export class ControlRepository {
   async getStockSummary(options?: {
+    search?: string;
     product_type_id?: string;
     brand_id?: string;
     page?: number;
@@ -61,6 +62,7 @@ export class ControlRepository {
 
     const where = {
       deleted_at: null,
+      ...(options?.search ? { OR: [{ name: { contains: options.search } }, { barcode: { contains: options.search } }] } : {}),
       ...(options?.product_type_id ? { product_type_id: options.product_type_id } : {}),
       ...(options?.brand_id ? { brand_id: options.brand_id } : {}),
     };
@@ -132,7 +134,7 @@ export class ControlRepository {
               },
             },
           },
-          orderBy: { [dbSortField]: sortOrder },
+          orderBy: [{ [dbSortField]: sortOrder }, { id: "asc" }],
           take: perPage,
           skip: (page - 1) * perPage,
         }),

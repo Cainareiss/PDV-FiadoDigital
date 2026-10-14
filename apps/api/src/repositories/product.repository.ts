@@ -11,7 +11,7 @@ import type { Prisma } from "@prisma/client";
 import { fromStoredRatio, toStoredRatio } from "../utils/percentage-scaling.js";
 
 const DEFAULT_PER_PAGE = 20;
-const MAX_PER_PAGE = 100;
+const MAX_PER_PAGE = 500;
 
 function toProduct(product: {
   id: string;
@@ -83,20 +83,9 @@ export class ProductRepository {
             ],
           }
         : {}),
-      AND: [
-        {
-          OR: [
-            { product_type_id: null },
-            { product_type: { is: { deleted_at: null } } },
-          ],
-        },
-        {
-          OR: [
-            { brand_id: null },
-            { brand: { is: { deleted_at: null } } },
-          ],
-        },
-      ],
+      // Removido: o filtro AND que ocultava produtos quando a Marca ou
+      // Tipo de Produto associado era soft-deleted. Produtos devem aparecer
+      // independentemente do estado da marca/tipo vinculado.
     };
 
     const [total, data] = await Promise.all([
@@ -105,7 +94,7 @@ export class ProductRepository {
         where,
         skip: (validPage - 1) * validPerPage,
         take: validPerPage,
-        orderBy: { name: "asc" },
+        orderBy: [{ name: "asc" }, { id: "asc" }],
         include: {
           brand: {
             select: {
