@@ -3,6 +3,7 @@ import type { CreateProductPayload, ProductQueryParams, UpdateProductPayload } f
 import { ProductTypeRepository } from "../repositories/product-type.repository.js";
 import { BrandRepository } from "../repositories/brand.repository.js";
 import { StockMovementRepository } from "../repositories/stock-movement.repository.js";
+import { badRequest, conflict, notFound } from "../errors/domain-error.js";
 
 const productRepository = new ProductRepository();
 const productTypeRepository = new ProductTypeRepository();
@@ -32,7 +33,7 @@ export class ProductService {
     const product = await productRepository.findById(id);
 
     if (!product) {
-      throw new Error("Produto não encontrado");
+      throw notFound("Produto não encontrado", "PRODUCT_NOT_FOUND");
     }
 
     return product;
@@ -40,10 +41,10 @@ export class ProductService {
 
   async create(payload: CreateProductPayload) {
     if (payload.barcode) {
-      const existingByBarcode = await productRepository.findByBarcode(payload.barcode);
+      const existingByBarcode = await productRepository.findByBarcode(payload.barcode, true);
 
       if (existingByBarcode) {
-        throw new Error("Código de barras já existe");
+        throw this.barcodeConflict(existingByBarcode);
       }
     }
 
@@ -53,7 +54,7 @@ export class ProductService {
 
     if (payload.product_type_id) {
       if (!productType) {
-        throw new Error("Tipo de produto não encontrado");
+        throw notFound("Tipo de produto não encontrado", "PRODUCT_TYPE_NOT_FOUND");
       }
     }
 
@@ -61,13 +62,13 @@ export class ProductService {
       const brand = await brandRepository.findById(payload.brand_id);
 
       if (!brand) {
-        throw new Error("Marca não encontrada");
+        throw notFound("Marca não encontrada", "BRAND_NOT_FOUND");
       }
     }
 
     if (typeof payload.profit_margin === "number") {
       if (payload.profit_margin <= 0 || payload.profit_margin >= 1) {
-        throw new Error("Margem de lucro deve estar entre 0 e 1");
+        throw badRequest("Margem de lucro deve estar entre 0 e 1");
       }
     }
 
@@ -87,17 +88,17 @@ export class ProductService {
 
   async update(id: string, payload: UpdateProductWithStockPayload, operatorId?: string) {
     if (payload.barcode) {
-      const existingByBarcode = await productRepository.findByBarcode(payload.barcode);
+      const existingByBarcode = await productRepository.findByBarcode(payload.barcode, true);
 
       if (existingByBarcode && existingByBarcode.id !== id) {
-        throw new Error("Código de barras já existe");
+        throw this.barcodeConflict(existingByBarcode);
       }
     }
 
     const currentProduct = await productRepository.findById(id);
 
     if (!currentProduct) {
-      throw new Error("Produto não encontrado");
+      throw notFound("Produto não encontrado", "PRODUCT_NOT_FOUND");
     }
 
     const nextProductTypeId = payload.product_type_id ?? currentProduct.product_type_id ?? undefined;
@@ -108,7 +109,7 @@ export class ProductService {
 
     if (payload.product_type_id) {
       if (!productType) {
-        throw new Error("Tipo de produto não encontrado");
+        throw notFound("Tipo de produto não encontrado", "PRODUCT_TYPE_NOT_FOUND");
       }
     }
 
@@ -116,13 +117,13 @@ export class ProductService {
       const brand = await brandRepository.findById(payload.brand_id);
 
       if (!brand) {
-        throw new Error("Marca não encontrada");
+        throw notFound("Marca não encontrada", "BRAND_NOT_FOUND");
       }
     }
 
     if (typeof payload.profit_margin === "number") {
       if (payload.profit_margin <= 0 || payload.profit_margin >= 1) {
-        throw new Error("Margem de lucro deve estar entre 0 e 1");
+        throw badRequest("Margem de lucro deve estar entre 0 e 1");
       }
     }
 
@@ -191,21 +192,21 @@ export class ProductService {
     const productType = await productTypeRepository.findById(payload.product_type_id);
 
     if (!productType) {
-      throw new Error("Tipo de produto não encontrado");
+      throw notFound("Tipo de produto não encontrado", "PRODUCT_TYPE_NOT_FOUND");
     }
 
     if (payload.brand_id) {
       const brand = await brandRepository.findById(payload.brand_id);
 
       if (!brand) {
-        throw new Error("Marca não encontrada");
+        throw notFound("Marca não encontrada", "BRAND_NOT_FOUND");
       }
     }
 
     const profitMargin = payload.profit_margin_percentage / 100;
 
     if (profitMargin <= 0 || profitMargin >= 1) {
-      throw new Error("Margem de lucro deve estar entre 1% e 99%");
+      throw badRequest("Margem de lucro deve estar entre 1% e 99%");
     }
 
     const products = await productRepository.findForBulkPricing(payload.product_type_id, payload.brand_id);
@@ -223,7 +224,19 @@ export class ProductService {
   }
 
   async deactivate(id: string) {
+    if (!await productRepository.findById(id)) {
+      throw notFound("Produto não encontrado", "PRODUCT_NOT_FOUND");
+    }
     return productRepository.softDelete(id);
+  }
+
+  private barcodeConflict(product: { name: string; deleted_at: Date | null }) {
+    return conflict(
+      product.deleted_at
+        ? `Código de barras já cadastrado no produto excluído "${product.name}".`
+        : `Código de barras já cadastrado no produto "${product.name}".`,
+      "BARCODE_ALREADY_REGISTERED",
+    );
   }
 
   private resolvePriceCents(

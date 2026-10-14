@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
+import { badRequest, notFound } from "../errors/domain-error.js";
 
 type PrismaClientLike = Prisma.TransactionClient | typeof prisma;
 
@@ -62,17 +63,17 @@ export class StockMovementRepository {
       });
 
       if (!product) {
-        throw new Error("Produto não encontrado");
+        throw notFound("Produto não encontrado", "PRODUCT_NOT_FOUND");
       }
 
       if (!product.is_bulk && !Number.isInteger(data.quantity)) {
-        throw new Error("Quantidade inválida para produto unitário");
+        throw badRequest("Quantidade inválida para produto unitário");
       }
 
       const nextStock = product.stock_quantity + data.quantity;
 
       if (nextStock < 0) {
-        throw new Error("Ajuste inválido: estoque resultante não pode ser negativo");
+        throw badRequest("Estoque resultante não pode ser negativo");
       }
 
       const nextAverageCost = this.resolveAverageCostAfterAdjustment({

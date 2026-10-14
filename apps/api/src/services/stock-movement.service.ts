@@ -4,6 +4,7 @@ import { SettingsRepository } from "../repositories/settings.repository.js";
 import { NotificationService } from "./notification.service.js";
 import { NOTIFICATION_TYPES, NOTIFICATION_SEVERITIES } from "@pdv/shared";
 import { logError } from "../utils/logger.js";
+import { badRequest, notFound } from "../errors/domain-error.js";
 
 const stockMovementRepository = new StockMovementRepository();
 const productRepository = new ProductRepository();
@@ -15,7 +16,7 @@ export class StockMovementService {
     const product = await productRepository.findById(productId);
 
     if (!product) {
-      throw new Error("Produto não encontrado");
+      throw notFound("Produto não encontrado", "PRODUCT_NOT_FOUND");
     }
 
     return stockMovementRepository.findByProductId(productId, 20);
@@ -29,23 +30,23 @@ export class StockMovementService {
     operator_id: string;
   }) {
     if (!payload.operator_id) {
-      throw new Error("Operador inválido");
+      throw badRequest("Operador inválido");
     }
 
     if (!payload.product_id) {
-      throw new Error("Produto é obrigatório");
+      throw badRequest("Produto é obrigatório");
     }
 
     if (!Number.isFinite(payload.quantity) || payload.quantity === 0) {
-      throw new Error("Quantidade de ajuste inválida");
+      throw badRequest("Quantidade de ajuste inválida");
     }
 
     if (!Number.isInteger(payload.unit_cost_cents) || payload.unit_cost_cents < 0) {
-      throw new Error("Custo unitário inválido");
+      throw badRequest("Custo unitário inválido");
     }
 
     if (!payload.description.trim()) {
-      throw new Error("Descrição é obrigatória");
+      throw badRequest("Descrição é obrigatória");
     }
 
     const result = await stockMovementRepository.createAdjustment({

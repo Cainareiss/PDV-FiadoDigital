@@ -1,5 +1,6 @@
 import { BrandRepository } from "../repositories/brand.repository.js";
 import type { CreateBrandPayload, UpdateBrandPayload } from "@pdv/shared";
+import { badRequest, conflict, notFound } from "../errors/domain-error.js";
 
 const brandRepository = new BrandRepository();
 
@@ -12,13 +13,13 @@ export class BrandService {
     const normalizedName = payload.name.trim();
 
     if (!normalizedName) {
-      throw new Error("Nome da marca é obrigatório");
+      throw badRequest("Nome da marca é obrigatório");
     }
 
     const existing = await brandRepository.findByName(normalizedName);
 
     if (existing) {
-      throw new Error("Marca já existe");
+      throw conflict("Marca já cadastrada", "BRAND_ALREADY_REGISTERED");
     }
 
     return brandRepository.create({ name: normalizedName });
@@ -28,20 +29,20 @@ export class BrandService {
     const brand = await brandRepository.findById(id);
 
     if (!brand) {
-      throw new Error("Marca não encontrada");
+      throw notFound("Marca não encontrada", "BRAND_NOT_FOUND");
     }
 
     if (typeof payload.name === "string") {
       const normalizedName = payload.name.trim();
 
       if (!normalizedName) {
-        throw new Error("Nome da marca é obrigatório");
+        throw badRequest("Nome da marca é obrigatório");
       }
 
       const existing = await brandRepository.findByName(normalizedName);
 
       if (existing && existing.id !== id) {
-        throw new Error("Marca já existe");
+        throw conflict("Marca já cadastrada", "BRAND_ALREADY_REGISTERED");
       }
 
       return brandRepository.update(id, { name: normalizedName });
@@ -54,7 +55,7 @@ export class BrandService {
     const brand = await brandRepository.findById(id);
 
     if (!brand) {
-      throw new Error("Marca não encontrada");
+      throw notFound("Marca não encontrada", "BRAND_NOT_FOUND");
     }
 
     return brandRepository.softDelete(id);

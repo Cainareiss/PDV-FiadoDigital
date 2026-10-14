@@ -155,10 +155,10 @@ export class ProductRepository {
     return product ? toProduct(product) : null;
   }
 
-  async findByBarcode(barcode: string) {
+  async findByBarcode(barcode: string, includeDeleted = false) {
     return prisma.product.findFirst({
-      where: { barcode, deleted_at: null },
-      select: { id: true },
+      where: { barcode, ...(!includeDeleted ? { deleted_at: null } : {}) },
+      select: { id: true, name: true, deleted_at: true },
     });
   }
 

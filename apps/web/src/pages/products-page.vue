@@ -927,11 +927,11 @@ async function submitProductForm(): Promise<void> {
     if (!response.ok) {
       if (data.errors) {
         productFormErrors.value = { ...productFormErrors.value, ...data.errors };
-      } else {
-        productFormErrors.value.submit = data.message || "Erro ao salvar produto.";
       }
+      const message: string = data.message || "Não foi possível salvar o produto.";
+      productFormErrors.value.submit = message;
 
-      toast(productFormErrors.value.submit || "Erro ao salvar produto.", "error");
+      toast(message, "error");
       scrollProductModalToTop();
       return;
     }

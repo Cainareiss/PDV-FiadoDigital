@@ -59,3 +59,12 @@ apps/web/test-results/*
 # Chaves Privadas
 *.pem
 *.key
+
+# Pacotes e bases de teste locais do atualizador
+/Atualizador-MP-Pedrinhas-PDV-*.exe
+/installer/release-*/
+/installer/tests/output/
+/installer/update-smoke/
+/installer/dist-payload/
+/installer/output/
+/installer/atualizacao-*/

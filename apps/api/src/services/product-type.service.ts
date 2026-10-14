@@ -1,5 +1,6 @@
 import { ProductTypeRepository } from "../repositories/product-type.repository.js";
 import type { CreateProductTypePayload, UpdateProductTypePayload } from "@pdv/shared";
+import { badRequest, conflict, notFound } from "../errors/domain-error.js";
 
 const productTypeRepository = new ProductTypeRepository();
 
@@ -12,13 +13,13 @@ export class ProductTypeService {
     const normalizedName = payload.name.trim();
 
     if (!normalizedName) {
-      throw new Error("Nome do tipo de produto é obrigatório");
+      throw badRequest("Nome do tipo de produto é obrigatório");
     }
 
     const existing = await productTypeRepository.findByName(normalizedName);
 
     if (existing) {
-      throw new Error("Tipo de produto já existe");
+      throw conflict("Tipo de produto já cadastrado", "PRODUCT_TYPE_ALREADY_REGISTERED");
     }
 
     return productTypeRepository.create({
@@ -31,20 +32,20 @@ export class ProductTypeService {
     const productType = await productTypeRepository.findById(id);
 
     if (!productType) {
-      throw new Error("Tipo de produto não encontrado");
+      throw notFound("Tipo de produto não encontrado", "PRODUCT_TYPE_NOT_FOUND");
     }
 
     if (typeof payload.name === "string") {
       const normalizedName = payload.name.trim();
 
       if (!normalizedName) {
-        throw new Error("Nome do tipo de produto é obrigatório");
+        throw badRequest("Nome do tipo de produto é obrigatório");
       }
 
       const existing = await productTypeRepository.findByName(normalizedName);
 
       if (existing && existing.id !== id) {
-        throw new Error("Tipo de produto já existe");
+        throw conflict("Tipo de produto já cadastrado", "PRODUCT_TYPE_ALREADY_REGISTERED");
       }
 
       return productTypeRepository.update(id, {
@@ -68,7 +69,7 @@ export class ProductTypeService {
     const productType = await productTypeRepository.findById(id);
 
     if (!productType) {
-      throw new Error("Tipo de produto não encontrado");
+      throw notFound("Tipo de produto não encontrado", "PRODUCT_TYPE_NOT_FOUND");
     }
 
     return productTypeRepository.softDelete(id);
